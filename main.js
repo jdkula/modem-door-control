@@ -26,7 +26,6 @@
 /** @typedef {import('./typedefs').Person} Person */
 /** @typedef {import('./typedefs').Setting} Setting */
 
-
 //// <== Environment Setup ==> ////
 
 // <~~ Environment setup & constants ~~> //
@@ -188,6 +187,16 @@ function onData(data) {
   }
 }
 
+function onClose() {
+  controlLog.info("Serial connection closed. Shutting down...");
+  process.exit(0);
+}
+
+function onError() {
+  controlLog.fatal("Serial connection failed! Shutting down...");
+  process.exit(1);
+}
+
 /** Triggers any promises waiting on the modem to acknowledge a previous command */
 function onOk() {
   controlLog.silly("Got 'OK' from modem");
@@ -332,6 +341,8 @@ async function onMongoChange(next) {
 
 // <~~ Serial events ~~> //
 port.on("open", onOpen);
+port.on("close", onClose);
+port.on("error", onError);
 parser.on("data", onData);
 
 // <~~ Mongo change stream setup ~~> //

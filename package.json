@@ -11,6 +11,6 @@
   },
   "scripts": {
     "sync": "rsync --include='yarn.lock' --filter=':- .gitignore' --exclude='.git' -azvh . star-haven:~/door-control && rsync -azvh ~/infra/private/generated/door-control.env star-haven:~/door-control/.env",
-    "deploy": "yarn sync && ssh star-haven -- sh -c \"'cd ~/door-control && docker build . -t door-control && (docker container rm -f door-control || true) && docker run --device /dev/ttyACM0 -e TTY_PATH=/dev/ttyACM0 -v ~/door-control/.env:/door-control/.env --restart unless-stopped --name door-control -d door-control'\""
+    "deploy": "yarn sync && ssh star-haven -- sh -c \"'cd ~/door-control && docker build . -t door-control && (docker container rm -f door-control || true) && docker run --device /dev/ttyACM0 -e TTY_PATH=/dev/ttyACM0 -v ~/door-control/.env:/door-control/.env --restart always --name door-control -d door-control'\""
   }
 }
