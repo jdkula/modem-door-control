@@ -7,6 +7,26 @@
  * dial-up modem.
  */
 
+//// <== Type Imports ==> ////
+/**
+ * @template T
+ * @typedef {import('mongodb').Collection<T>} Collection<T>
+ */
+
+/**
+ * @typedef {import('mongodb').ObjectId} ObjectId
+ */
+
+/**
+ * @template T
+ * @typedef {import('mongodb').ChangeStreamDocument<T>} ChangeStreamDocument<T>
+ */
+
+/** @typedef {import('./typedefs').Authorization} Authorization */
+/** @typedef {import('./typedefs').Person} Person */
+/** @typedef {import('./typedefs').Setting} Setting */
+
+
 //// <== Environment Setup ==> ////
 
 // <~~ Environment setup & constants ~~> //
@@ -30,63 +50,12 @@ if (/[^,0-9]/.test(kDialSequence)) {
 const { SerialPort } = require("serialport");
 const { ReadlineParser } = require("@serialport/parser-readline");
 const { Logger } = require("tslog");
-const { MongoClient } = require("mongodb");
 const twilio = require("twilio");
 
-// <~~ Type Imports ~~> //
-/**
- * @template T
- * @typedef {import('mongodb').Collection<T>} Collection<T>
- */
-
-/**
- * @typedef {import('mongodb').ObjectId} ObjectId
- */
-
-/**
- * @template T
- * @typedef {import('mongodb').ChangeStreamDocument<T>} ChangeStreamDocument<T>
- */
+const { settingsCol, authorizationsCol } = require("./mongo-collections");
 
 // <~~ Remote service connections ~~> //
 const twilioClient = twilio(kAccountSid, kAuthToken);
-const mongoclient = MongoClient.connect(process.env.MONGO_URL);
-
-// <~~ MongoDB collections ~~> //
-const db = mongoclient.then((cli) => cli.db(process.env.MONGO_DB));
-
-/**
- * Collection of Authorizations. All authorizations expire 6 minutes
- * after their creation time (at).
- *
- * @typedef {Object} Authorization
- * @property {ObjectId} _id - The ObjectId that uniquely identifies this Authorization.
- * @property {Person} person - The person who requested this authorization
- * @property {Date} at - The creation time
- * @property {string} for - The location this authorization was created for
- */
-/** @type {Promise<Collection<Authorization>>} */
-const authorizationsCol = db.then((db) => db.collection("authorizations"));
-
-/**
- * Collection of Settings. Per location– defines phone numbers thar are allowed
- * to access that location.
- *
- * @typedef {Object} Setting
- * @property {string} _id - The ID of this location
- * @property {Array<Person>} allowed_people - The people allowed to request access.
- * @property {Array<string>} notify_numbers - Numbers to notify whenever access is granted
- */
-/** @type {Promise<Collection<Setting>>} */
-const settingsCol = db.then((db) => db.collection("settings"));
-
-/**
- * The above ^^ objects store People, which are just a pair of name and number.
- *
- * @typedef {Object} Person
- * @property {string} name - The person's name
- * @property {string} phone - The person's phone number.
- */
 
 // <~~ Logging setup ~~> //
 const ttyLog = new Logger({
