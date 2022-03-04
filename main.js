@@ -158,7 +158,7 @@ async function getSettings() {
   controlLog.silly(`Retrieving settings for location ${kLocationId}`);
   const collection = await settingsCol;
   const out = await collection.findOne({ _id: kLocationId });
-  controlLog.silly("Retrieved settings", out);
+  controlLog.silly("Retrieved settings");
   return out;
 }
 
@@ -278,7 +278,9 @@ async function notifyOne(authorization) {
  * @param {Setting} settings
  */
 async function notifyAdmins(authorizations, settings) {
-  controlLog.silly(`Sending admin notifications`);
+  controlLog.silly(
+    `Sending admin notifications to ${settings.notify_numbers.join(", ")}`
+  );
 
   const userNamesJoined = authorizations
     .map((auth) => auth.person.name)
