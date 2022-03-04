@@ -18,6 +18,10 @@ const kAuthToken = process.env.TWILIO_AUTH;
 const kTwilioPhone = process.env.TWILIO_PHONE;
 const kDialSequence = process.env.DIAL_SEQUENCE || "9,";
 
+const kMinLogLevel = /** @type {import('tslog').TLogLevelName} */ (
+  process.env.MIN_LOG_LEVEL || "debug"
+);
+
 if (/[^,0-9]/.test(kDialSequence)) {
   throw new Error("Dial sequence contains illegal characters");
 }
@@ -89,9 +93,13 @@ const ttyLog = new Logger({
   name: "TTY",
   displayFilePath: "hidden",
   displayFunctionName: false,
+  minLevel: kMinLogLevel,
 });
-const mongoChangeLog = new Logger({ name: "MongoDB Change" });
-const controlLog = new Logger({ name: "Control" });
+const mongoChangeLog = new Logger({
+  name: "MongoDB Change",
+  minLevel: kMinLogLevel,
+});
+const controlLog = new Logger({ name: "Control", minLevel: kMinLogLevel });
 controlLog.info(
   `Hello! Door control for location ${kLocationId} starting up...`
 );

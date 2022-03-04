@@ -16,6 +16,7 @@ DIAL_SEQUENCE: The sequence used to unlock the door. Use , to add a 2-second pau
 TWILIO_SID: Twilio Auth ID
 TWILIO_AUTH: Twilio Auth Secret
 TWILIO_PHONE: The phone number to send text messages from
+MIN_LOG_LEVEL: The minimum logging level. One of "silly", "trace", "debug", "info", "warn", "error", or "fatal". Defaults to "debug".
 ```
 
 Created mostly for education purposes. Please be careful with
