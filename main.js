@@ -12,10 +12,15 @@
 // <~~ Environment setup & constants ~~> //
 require("dotenv").config();
 
-const kLocationId = process.env.SETTING_ID;
+const kLocationId = process.env.LOCATION_ID;
 const kAccountSid = process.env.TWILIO_SID;
 const kAuthToken = process.env.TWILIO_AUTH;
 const kTwilioPhone = process.env.TWILIO_PHONE;
+const kDialSequence = process.env.DIAL_SEQUENCE || "9,";
+
+if (/[^,0-9]/.test(kDialSequence)) {
+  throw new Error("Dial sequence contains illegal characters");
+}
 
 // <~~ Imports ~~> //
 const { SerialPort } = require("serialport");
@@ -187,7 +192,7 @@ function onOpen() {
   controlLog.debug("Triggering control sequence");
   port.write("+++\r\n"); // AT escape sequence (-> command mode)
   port.write("ATH0\r\n"); // Go on-hook if we were off-hook before
-  port.write("ATX0\r\n"); // Disable checking for a dial tone (we're exploiting this to use dialing to input 9)
+  port.write("ATX0\r\n"); // Disable checking for a dial tone (we're exploiting this to use dialing to input our dial sequence)
   controlLog.info("Ready.");
 }
 
@@ -232,10 +237,10 @@ async function onRing() {
   controlLog.info(
     `Found authorizations for ${userNames.join(",")}. Triggering door.`
   );
-  controlLog.debug("Dialing 9 to trigger door");
-  // "Dials" 9, which A) picks up the phone (currently ringing) and B) presses the 9 button.
-  // Command anatomy: ATD (Dial) T (tone) 9 (number 9) , (wait 2s) ; (remain in command mode)
-  port.write("ATDT9,;\r\n");
+  controlLog.debug(`Dialing ${kDialSequence} to trigger door`);
+  // By default, "Dials" 9, which A) picks up the phone (currently ringing) and B) presses the 9 button.
+  // Default command anatomy: ATD (Dial) T (tone) 9 (number 9) , (wait 2s) ; (remain in command mode)
+  port.write(`ATDT${kDialSequence};\r\n`);
 
   // Wait for modem to finish (i.e. until we receive OK)
   await okWaiter.wait();

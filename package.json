@@ -1,4 +1,7 @@
 {
+  "license": "UNLICENSED",
+  "private": true,
+  "description": "Building access via Twilio and a serial fax/dial-up modem",
   "dependencies": {
     "dotenv": "^16.0.0",
     "mongodb": "^4.4.1",
