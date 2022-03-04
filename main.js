@@ -92,6 +92,9 @@ const parser = port.pipe(new ReadlineParser());
 /** Locally stores authorizations so we can notify when they expire. */
 const localAuthMap = new Map();
 
+/** Prevents multiple onRings from happening simultaneously */
+let running = false;
+
 //// <== Helper Classes & Functions ==> ////
 
 /**
@@ -210,35 +213,42 @@ function onOk() {
 
 /** Allows authorized users in if they exist. */
 async function onRing() {
-  controlLog.debug("Ring Received.");
-  const authorizations = await getAuthorizations();
+  if (running) return;
 
-  if (!authorizations) {
-    controlLog.info("No authorizations found: ignoring ring.");
-    return;
-  } // else let them in!
+  running = true;
+  try {
+    controlLog.debug("Ring Received.");
+    const authorizations = await getAuthorizations();
 
-  const settings = await getSettings();
-  const userNames = authorizations.map((auth) => auth.person.name);
+    if (!authorizations) {
+      controlLog.info("No authorizations found: ignoring ring.");
+      return;
+    } // else let them in!
 
-  // Promises not awaited on purpose-- should happen asynchronously.
-  notify(authorizations, settings); // Notify people that we're letting them in
-  expireAuthorizations(authorizations); // Expire authorizations (they're one-time use!)
+    const settings = await getSettings();
+    const userNames = authorizations.map((auth) => auth.person.name);
 
-  controlLog.info(
-    `Found authorizations for ${userNames.join(",")}. Triggering door.`
-  );
-  controlLog.debug(`Dialing ${kDialSequence} to trigger door`);
-  // By default, "Dials" 9, which A) picks up the phone (currently ringing) and B) presses the 9 button.
-  // Default command anatomy: ATD (Dial) T (tone) 9 (number 9) , (wait 2s) ; (remain in command mode)
-  port.write(`ATDT${kDialSequence};\r\n`);
+    // Promises not awaited on purpose-- should happen asynchronously.
+    notify(authorizations, settings); // Notify people that we're letting them in
+    expireAuthorizations(authorizations); // Expire authorizations (they're one-time use!)
 
-  // Wait for modem to finish (i.e. until we receive OK)
-  await okWaiter.wait();
+    controlLog.info(
+      `Found authorizations for ${userNames.join(",")}. Triggering door.`
+    );
+    controlLog.debug(`Dialing ${kDialSequence} to trigger door`);
+    // By default, "Dials" 9, which A) picks up the phone (currently ringing) and B) presses the 9 button.
+    // Default command anatomy: ATD (Dial) T (tone) 9 (number 9) , (wait 2s) ; (remain in command mode)
+    port.write(`ATDT${kDialSequence};\r\n`);
 
-  // Go on-hook
-  controlLog.debug("Hanging up");
-  port.write("ATH\r\n");
+    // Wait for modem to finish (i.e. until we receive OK)
+    await okWaiter.wait();
+
+    // Go on-hook
+    controlLog.debug("Hanging up");
+    port.write("ATH\r\n");
+  } finally {
+    running = false;
+  }
 }
 
 /**
