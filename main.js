@@ -69,7 +69,12 @@ const mongoChangeLog = new Logger({
 });
 const controlLog = new Logger({ name: "Control", minLevel: kMinLogLevel });
 controlLog.info(
-  `Hello! Door control for location ${kLocationId} starting up...`
+  `Hello! Door control for location ${kLocationId} starting up. Environment:`,
+  {
+    kDialSequence,
+    kMinLogLevel,
+    kLocationId,
+  }
 );
 
 // <~~ TTY (Serial) setup ~~> //
@@ -122,7 +127,7 @@ class EventWaiter {
 async function getAuthorizations() {
   controlLog.silly(`Retrieving authorizations for location ${kLocationId}`);
   const collection = await authorizationsCol;
-  const arr = await collection.find({ for: process.env.SETTING_ID }).toArray();
+  const arr = await collection.find({ for: kLocationId }).toArray();
   controlLog.silly(`Retrieved ${arr.length} authorization(s)`);
   return arr.length === 0 ? null : arr;
 }
