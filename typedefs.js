@@ -13,6 +13,7 @@ import { ObjectId } from "mongodb";
  * @property {string} _id - The ID of this location
  * @property {Array<Person>} allowed_people - The people allowed to request access.
  * @property {Array<string>} notify_numbers - Numbers to notify whenever access is granted
+ * @property {string} access_number - The number users should dial for access
  */
 
 /**

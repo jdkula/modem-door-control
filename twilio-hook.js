@@ -20,18 +20,19 @@ exports = async function ({ query, body }, response) {
   const settings = await db.collection("settings").findOne(
     {
       _id: id,
-      "allowed_numbers.phone": twilioMessage.From,
+      "allowed_people.phone": twilioMessage.From,
     },
     {
-      "allowed_numbers.$": 1,
+      "allowed_people.$": 1,
     }
   );
 
   if (settings) {
-    const info = settings.allowed_numbers[0];
+    const info = settings.allowed_people[0];
     const properCased = id[0].toUppercase + id.substr(1).toLowerCase();
+    const accessNum = settings.access_number;
     twiml.message(
-      `Hi, ${info.name}! Dial ***REMOVED*** at ${properCased}'s entrance within the next 5 minutes and I'll let you in :)`
+      `Hi, ${info.name}! Dial ${accessNum} at ${properCased}'s entrance within the next 5 minutes and I'll let you in :)`
     );
 
     // Add authorization to the database, or update an existing one.
