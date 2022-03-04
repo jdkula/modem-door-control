@@ -24,12 +24,13 @@ exports = async function ({ query, body }, response) {
     },
     {
       "allowed_people.$": 1,
+      access_number: 1,
     }
   );
 
   if (settings) {
     const info = settings.allowed_people[0];
-    const properCased = id[0].toUppercase + id.substr(1).toLowerCase();
+    const properCased = id[0].toUpperCase() + id.substr(1).toLowerCase();
     const accessNum = settings.access_number;
     twiml.message(
       `Hi, ${info.name}! Dial ${accessNum} at ${properCased}'s entrance within the next 5 minutes and I'll let you in :)`
