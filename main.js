@@ -233,7 +233,7 @@ async function onRing() {
     expireAuthorizations(authorizations); // Expire authorizations (they're one-time use!)
 
     controlLog.info(
-      `Found authorizations for ${userNames.join(",")}. Triggering door.`
+      `Found authorization(s) for ${userNames.join(", ")}. Triggering door.`
     );
     controlLog.debug(`Dialing ${kDialSequence} to trigger door`);
     // By default, "Dials" 9, which A) picks up the phone (currently ringing) and B) presses the 9 button.
@@ -294,7 +294,7 @@ async function notifyAdmins(authorizations, settings) {
 
   const userNamesJoined = authorizations
     .map((auth) => auth.person.name)
-    .join(",");
+    .join(", ");
 
   await Promise.all(
     settings.notify_numbers.map((number) =>
