@@ -288,13 +288,19 @@ async function notifyOne(authorization) {
  * @param {Setting} settings
  */
 async function notifyAdmins(authorizations, settings) {
+  const userNamesJoined = authorizations
+    .filter((auth) => !auth.person.no_notify)
+    .map((auth) => auth.person.name)
+    .join(", ");
+
+  if (userNamesJoined.length === 0) {
+    controlLog.silly(`No admin notifications to send (all are no_notify)`);
+    return;
+  }
+
   controlLog.silly(
     `Sending admin notifications to ${settings.notify_numbers.join(", ")}`
   );
-
-  const userNamesJoined = authorizations
-    .map((auth) => auth.person.name)
-    .join(", ");
 
   await Promise.all(
     settings.notify_numbers.map((number) =>

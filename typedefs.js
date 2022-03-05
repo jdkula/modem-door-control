@@ -22,4 +22,5 @@ import { ObjectId } from "mongodb";
  * @typedef {Object} Person
  * @property {string} name - The person's name
  * @property {string} phone - The person's phone number.
+ * @property {boolean | undefined} no_notify - True if the admins shouldn't be notified when this person arrives (e.g. residents)
  */
