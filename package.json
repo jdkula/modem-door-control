@@ -3,8 +3,11 @@
   "private": true,
   "description": "Building access via Twilio and a serial fax/dial-up modem",
   "dependencies": {
+    "@types/express": "^4.17.13",
     "dotenv": "^16.0.0",
+    "express": "^4.18.1",
     "mongodb": "^4.4.1",
+    "prom-client": "^14.0.1",
     "serialport": "^10.3.0",
     "tslog": "^3.3.2",
     "twilio": "^3.75.0"

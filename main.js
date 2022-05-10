@@ -50,8 +50,11 @@ const { SerialPort } = require("serialport");
 const { ReadlineParser } = require("@serialport/parser-readline");
 const { Logger } = require("tslog");
 const twilio = require("twilio");
+const prom = require('prom-client');
+const express = require('express');
 
 const { settingsCol, authorizationsCol } = require("./mongo-collections");
+const {MongoError} = require("mongodb");
 
 // <~~ Remote service connections ~~> //
 const twilioClient = twilio(kAccountSid, kAuthToken);
@@ -76,6 +79,37 @@ controlLog.info(
     kLocationId,
   }
 );
+
+// <~~ Prometheus setup ~~> //
+
+const Registry = prom.Registry;
+const register = new Registry();
+
+const mongoErrorCounter = new prom.Counter({
+  name: "modem_door_control_mongo_errors_total",
+  help: "Number of MongoDB errors registered"
+});
+
+const authorizationsReceived = new prom.Counter({
+  name: "modem_door_control_authorizations_received_count",
+  help: "Number of authorizations received"
+});
+
+const authorizationsMissed = new prom.Counter({
+  name: "modem_door_control_authorizations_missed_count",
+  help: "Number of authorizations that DIDN'T open a door"
+});
+
+const authorizationsActivated = new prom.Counter({
+  name: "modem_door_control_authorizations_activated_count",
+  help: "Number of authorizations that DID open a door"
+});
+
+prom.collectDefaultMetrics({ register, prefix: "modem_door_control_" });
+register.registerMetric(mongoErrorCounter);
+register.registerMetric(authorizationsReceived);
+register.registerMetric(authorizationsMissed);
+register.registerMetric(authorizationsActivated);
 
 // <~~ TTY (Serial) setup ~~> //
 const port = new SerialPort({
@@ -145,7 +179,7 @@ async function expireAuthorizations(authorizations) {
   controlLog.silly(`Expiring ${authorizations.length} authorizations...`);
   const collection = await authorizationsCol;
   authorizations.forEach((auth) => localAuthMap.delete(auth._id.toHexString()));
-  collection.deleteMany({
+  await collection.deleteMany({
     _id: { $in: authorizations.map((au) => au._id) },
   });
 
@@ -229,12 +263,14 @@ async function onRing() {
     const userNames = authorizations.map((auth) => auth.person.name);
 
     // Promises not awaited on purpose-- should happen asynchronously.
-    notify(authorizations, settings); // Notify people that we're letting them in
-    expireAuthorizations(authorizations); // Expire authorizations (they're one-time use!)
+    const notifyPromise = notify(authorizations, settings); // Notify people that we're letting them in
+    const expirePromise = expireAuthorizations(authorizations); // Expire authorizations (they're one-time use!)
 
     controlLog.info(
       `Found authorization(s) for ${userNames.join(", ")}. Triggering door.`
     );
+    authorizationsActivated.inc(authorizations.length);
+
     controlLog.debug(`Dialing ${kDialSequence} to trigger door`);
     // By default, "Dials" 9, which A) picks up the phone (currently ringing) and B) presses the 9 button.
     // Default command anatomy: ATD (Dial) T (tone) 9 (number 9) , (wait 2s) ; (remain in command mode)
@@ -246,6 +282,13 @@ async function onRing() {
     // Go on-hook
     controlLog.debug("Hanging up");
     port.write("ATH\r\n");
+
+    await notifyPromise;
+    await expirePromise;
+  } catch (e) {
+    if (e instanceof MongoError) {
+      mongoErrorCounter.inc()
+    }
   } finally {
     running = false;
   }
@@ -333,6 +376,7 @@ async function onMongoChange(next) {
       next.fullDocument._id.toHexString(),
       next.fullDocument.person
     );
+    authorizationsReceived.inc();
 
     // Authorization was expired or was deleted
   } else if (next.operationType === "delete") {
@@ -356,6 +400,7 @@ async function onMongoChange(next) {
       mongoChangeLog.silly(
         `Sent authorization expiration message to ${person.name}`
       );
+      authorizationsMissed.inc();
     }
   }
 }
@@ -381,7 +426,23 @@ authorizationsCol
 getAuthorizations().then(
   (authorizations) =>
     authorizations &&
-    authorizations.forEach((authorization) =>
-      localAuthMap.set(authorization._id.toHexString(), authorization.person)
+    authorizations.forEach((authorization) => {
+        localAuthMap.set(authorization._id.toHexString(), authorization.person);
+        authorizationsReceived.inc();
+      }
     )
 );
+
+
+// <~~ Prometheus access ~~> //
+
+const app = express();
+app.get("/metrics", (req, res) => {
+  register.metrics().then(metrics => {
+    res.send(metrics);
+  })
+});
+
+app.listen(8000, () => {
+  controlLog.info("Metrics now available at localhost:8000/metrics");
+})
